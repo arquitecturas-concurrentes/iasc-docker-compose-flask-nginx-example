@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    
+    <title>Docker Compose Flask App</title>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/8.9.1/highlight.min.js"></script>
+    <script>hljs.initHighlightingOnLoad();</script>
+    <style>
+      pre {
+        background: #eee;
+        padding-bottom: 2em;
+      }
+    </style>
+</head>
+<body>
+  <div class="jumbotron text-center">
+    <h1>Hello IASC student!</h1>
+    <p>I have been seen {{ hit_times }} times</p>
+  </div>
+  <div class="container">
+    <div class="row">
+      <div class="col-lg-6" style="display:flex">
+        <div class="container">
+          <h3>Dcoker Compose</h3>
+          <pre><code class="language-dockerfile hljs">
+            version: '3.8'
+
+            volumes:
+              redis-data:
+                driver: local
+            
+            services:
+              proxy:
+                build:
+                  context: ./nginx
+                  dockerfile: Dockerfile  
+                ports:
+                  - "80:80"
+                depends_on:
+                  - app  
+              redis:
+                image: 'redis:7.2-rc2-alpine'
+                ports:
+                  - "6379"    
+                volumes:
+                  - redis-data:/data  
+              app:
+                build:
+                  context: ./app
+                  dockerfile: Dockerfile
+                expose:
+                  - "5000"
+                restart: "always"  
+          </code></pre>
+        </div>
+      </div>
+      <div class="col-lg-6" style="display:flex">
+        <div class="container">
+          <h3>nginx</h3>
+        <pre><code class="language-nginx hljs">
+          worker_processes 4;
+ 
+          events { worker_connections 1024; }
+           
+          http {
+              sendfile on;
+           
+              upstream app {
+                  server iasc-docker-compose-flask-redis-example_app_1:5000;
+                  server iasc-docker-compose-flask-redis-example_app_2:5000;
+                  server iasc-docker-compose-flask-redis-example_app_3:5000;
+                  server iasc-docker-compose-flask-redis-example_app_4:5000;
+              }
+           
+              server {
+                  listen 80;
+                  server_name app.com;
+                  location / {
+                      proxy_pass         http://app;
+                      proxy_redirect     off;
+                      proxy_set_header   Host $host;
+                      proxy_set_header   X-Real-IP $remote_addr;
+                      proxy_set_header   X-Forwarded-For $proxy_add_x_forwarded_for;
+                      proxy_set_header   X-Forwarded-Host $server_name;
+                  }
+              }
+          }
+          </code></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
